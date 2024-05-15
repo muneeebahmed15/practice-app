@@ -1,92 +1,117 @@
-import {
-  Card,
-  Page,
-  Layout,
-  TextContainer,
-  Image,
-  Stack,
-  Link,
-  Text,
-} from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
-import { useTranslation, Trans } from "react-i18next";
-
-import { trophyImage } from "../assets";
-
-import { ProductsCard } from "../components";
+import { Layout, Page } from "@shopify/polaris";
+import { Cards, OrdersGraph } from "../components";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
-  const { t } = useTranslation();
+  const fetch = useAuthenticatedFetch();
+  const [loading, setLoading] = useState(false);
+
+  const [totalProduct, setTotalProduct] = useState();
+  const [totalCollection, setTotalCollection] = useState();
+  const [totalOrders, setTotalOrders] = useState();
+  const [fullfilledOrders, setFullfilledOrders] = useState();
+  const [remainingOrders, setRemainingOrders] = useState();
+
+  const totalProducts = async () => {
+    setLoading(true);
+    try {
+      let request = await fetch("/api/products/count", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      let response = await request.json();
+      setTotalProduct(response.count);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalCollections = async () => {
+    setLoading(true);
+    try {
+      let request = await fetch("api/custom-collection/count", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      let response = await request.json();
+      setTotalCollection(response.count);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalOrder = async () => {
+    setLoading(true);
+    try {
+      let request = await fetch("api/orders/all", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      let response = await request.json();
+      setTotalOrders(response.data.length);
+      let fulfilledOrder = response.data.filter(
+        (x) => x.fulfillment_status === "fulfilled"
+      );
+      setFullfilledOrders(fulfilledOrder.length);
+      setRemainingOrders(totalOrders - fullfilledOrders);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  console.log(totalOrders);
+
+  useEffect(() => {
+    totalProducts();
+    totalCollections();
+    totalOrder();
+  }, []);
+
   return (
-    <Page narrowWidth>
-      <TitleBar title={t("HomePage.title")} primaryAction={null} />
+    <Page fullWidth>
       <Layout>
-        <Layout.Section>
-          <Card sectioned>
-            <Stack
-              wrap={false}
-              spacing="extraTight"
-              distribution="trailing"
-              alignment="center"
-            >
-              <Stack.Item fill>
-                <TextContainer spacing="loose">
-                  <Text as="h2" variant="headingMd">
-                    {t("HomePage.heading")}
-                  </Text>
-                  <p>
-                    <Trans
-                      i18nKey="HomePage.yourAppIsReadyToExplore"
-                      components={{
-                        PolarisLink: (
-                          <Link url="https://polaris.shopify.com/" external />
-                        ),
-                        AdminApiLink: (
-                          <Link
-                            url="https://shopify.dev/api/admin-graphql"
-                            external
-                          />
-                        ),
-                        AppBridgeLink: (
-                          <Link
-                            url="https://shopify.dev/apps/tools/app-bridge"
-                            external
-                          />
-                        ),
-                      }}
-                    />
-                  </p>
-                  <p>{t("HomePage.startPopulatingYourApp")}</p>
-                  <p>
-                    <Trans
-                      i18nKey="HomePage.learnMore"
-                      components={{
-                        ShopifyTutorialLink: (
-                          <Link
-                            url="https://shopify.dev/apps/getting-started/add-functionality"
-                            external
-                          />
-                        ),
-                      }}
-                    />
-                  </p>
-                </TextContainer>
-              </Stack.Item>
-              <Stack.Item>
-                <div style={{ padding: "0 20px" }}>
-                  <Image
-                    source={trophyImage}
-                    alt={t("HomePage.trophyAltText")}
-                    width={120}
-                  />
-                </div>
-              </Stack.Item>
-            </Stack>
-          </Card>
-        </Layout.Section>
-        <Layout.Section>
-          <ProductsCard />
-        </Layout.Section>
+        <div>
+          <div style={{ marginTop: "20px" }}>
+            <OrdersGraph />
+          </div>
+
+          <div style={{ marginTop: "20px" }}>
+            <Layout>
+              <Cards title={"Total Orders"} value={totalOrders} loading={loading} />
+              <Cards
+                title={"Fulfilled Orders"}
+                value={fullfilledOrders}
+                loading={loading}
+              />
+              <Cards
+                title={"Remaining Orders"}
+                value={remainingOrders}
+                loading={loading}
+              />
+              <Cards title={"Total Products"} value={totalProduct} loading={loading} />
+              <Cards
+                title={"Total Collection"}
+                value={totalCollection}
+                loading={loading}
+              />
+            </Layout>
+          </div>
+
+          <div className=""></div>
+        </div>
       </Layout>
     </Page>
   );

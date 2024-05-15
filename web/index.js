@@ -8,10 +8,7 @@ import shopify from "./shopify.js";
 import productCreator from "./product-creator.js";
 import PrivacyWebhookHandlers from "./privacy.js";
 
-const PORT = parseInt(
-  process.env.BACKEND_PORT || process.env.PORT || "3000",
-  10
-);
+const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT || "3000", 10);
 
 const STATIC_PATH =
   process.env.NODE_ENV === "production"
@@ -38,6 +35,31 @@ app.post(
 app.use("/api/*", shopify.validateAuthenticatedSession());
 
 app.use(express.json());
+
+//read shop information
+app.get("/api/shop/info", async (req, res) => {
+  let storeInfo = await shopify.api.rest.Shop.all({
+    session: res.locals.shopify.session,
+  });
+  res.status(200).send(storeInfo);
+});
+
+//read custom collection
+app.get("/api/custom-collection/count", async (req, res) => {
+  let countData = await shopify.api.rest.CustomCollection.count({
+    session: res.locals.shopify.session,
+  });
+  res.status(200).send(countData);
+});
+
+//all orders
+app.get("/api/orders/all", async (req, res) => {
+  let order = await shopify.api.rest.Order.all({
+    session: res.locals.shopify.session,
+    status: "any",
+  });
+  res.status(200).send(order);
+});
 
 app.get("/api/products/count", async (_req, res) => {
   const countData = await shopify.api.rest.Product.count({
